@@ -19,7 +19,7 @@ public class Maze {
 	// true = white, false = black
 	private boolean[][] maze;
 	
-	private final int ANIMATESPEED = 30;
+	private final int ANIMATESPEED = 10;
 	
 	private final double PCTFILLED = .8;
 	

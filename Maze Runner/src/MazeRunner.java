@@ -19,12 +19,12 @@ import javax.swing.KeyStroke;
 
 public class MazeRunner {
 	
-	private int speed = 100; // default is 100- smaller = slower
+	private int speed = 1; // default is 100- smaller = slower
 	
 	// constructs and adds the bots competing into the maze
 	private void addBots() {
 		Bot[] bots = {
-				new SuperBot(this, Color.black), new LoserBot(this)};
+				new SuperBot(this, Color.black), new RandomBot(this, Color.blue)};
 		for (Bot b : bots)
 			robots.put(b, new RobotInfo());
 	}
@@ -44,8 +44,8 @@ public class MazeRunner {
 	
 	private HashMap<Bot, RobotInfo> robots = new HashMap<Bot, RobotInfo>();
 
-	private Point begin = new Point(0, (int)(Math.random() * (COLS-2) + 1));
-	private final Point goal = new Point(ROWS-1, (int)(Math.random() * (COLS-2) + 1));
+	private Point begin;
+	private Point goal;
 
 	private Point p1, p2;
 	
@@ -55,6 +55,15 @@ public class MazeRunner {
 	private JFrame frame;
 	
 	private boolean animate = false;
+	
+	private ArrayList<Point> mainPathPoints;
+
+	private final int ANIMATESPEED = 10;
+	
+	private final double PCTFILLED = .8;
+	
+	private final double[] DIRECTIONWEIGHTS = {4, 3, 1}; // right, up/down, left
+
 		
 	// class to keep track of robots' locations
 	private class RobotInfo {
@@ -100,117 +109,50 @@ public class MazeRunner {
 		else if (r.dir.x == -1) r.dir = new Point(0,1);
 		else r.dir = new Point(1,0);
 	}
+
 	
-	private void fillMaze() {
+	public boolean fillMaze(boolean animate) {
+		maze = new boolean[ROWS][COLS];
+		mainPathPoints = new ArrayList<Point>();
+		Point cp = new Point(0, (int)(Math.random() * ROWS));
+		maze[cp.y][cp.x] = true;
 		
-		// recreates the maze until it is solveable
-		do {
-			maze = new boolean[ROWS][COLS];
-			maze[begin.y][begin.x] = true;
-			maze[goal.y][goal.x] = true;
-			p1 = new Point(begin.x+1, begin.y);
-			p2 = new Point(goal.x-1, goal.y);
-			dfs(true);
-		} while(!checkMaze());
-		
-		// adds side branches until 40% of maze is white
-		ArrayList<Point> whites = whites();
-		while (pctFilled < .4) {
-			int r = (int)(Math.random()*whites.size());
-			Point aim = new Point((int)(Math.random()*maze.length), (int)(Math.random()*maze[0].length));
-			int length = (int)(Math.random()*maze.length+maze.length/4);
-			buildBranch(whites.remove(r), aim, length);
-			whites = whites();
-		}
-		
-		for (int i = 0; i < maze.length; i++) {
-			maze[i][0] = false;
-			maze[i][maze[0].length-1] = false;
-		}
-		for (int i = 0; i < maze[0].length; i++) {
-			maze[0][i] = false;
-			maze[maze.length-1][i] = false;
-		}
-		maze[begin.y][begin.x] = true;
-		maze[goal.y][goal.x] = true;
-	}
-	
-	private ArrayList<Point> whites() {
-		double numFilled = 0;
-		ArrayList<Point> whites = new ArrayList<Point>();
-		for (int i = 0; i < maze.length; i++)
-			for (int j = 1; j < maze[i].length-1; j++)
-				if (maze[i][j]) {
-					whites.add(new Point(j,i));
-					numFilled++;
-				}
-		pctFilled = numFilled/(maze.length*maze[0].length);
-		return whites;
-	}
-	
-	// adds a side branch to the maze
-	private void buildBranch(Point start, Point aim, int length) {
-		Point np = start;
-		Point lastP = null;
-		Point lastDir = null;
-		for (int i = 0; i < length && np.y < maze.length-1; i++) {
+		while (cp.x < COLS - 2) {
+			if ((cp = randPoint(cp))== null) {
+				return false;
+			}
+			maze[cp.y][cp.x] = true;
 			if (animate) {
 				try {
-					Thread.sleep(75);
+					Thread.sleep(ANIMATESPEED);
 				} catch (InterruptedException e) {
-					//  Auto-generated catch block
+					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				frame.getContentPane().repaint();
 			}
-			np = randPoint(np, aim);
-			if (np == null) {
-				if (lastDir!= null && lastP.x+lastDir.x < maze[0].length-1 && lastP.x+lastDir.x > 0
-						&& lastP.y+lastDir.y < maze.length && lastP.y+lastDir.y > 0)
-					maze[lastP.y+lastDir.y][lastP.x+lastDir.x] = true;
-				return;
-			}
-			maze[np.y][np.x] = true;
-			if (lastP!= null) lastDir = new Point(np.x-lastP.x,np.y-lastP.y);
-			lastP = np;
+			mainPathPoints.add(cp);
 		}
-	}
-	
-	// uses dfs to build a path from the start point to the end point
-	private boolean dfs(boolean forward) {
-		Point curr = forward ? p1 : p2; 
-		maze[curr.y][curr.x] = true;
-
-		if (p1.equals(p2)) return true;
-		if (animate) {
-			try {
-				Thread.sleep(75);
-			} catch (InterruptedException e) {
-				//  Auto-generated catch block
-				e.printStackTrace();
-			}
-
+		maze[cp.y][cp.x+1] = true;
+		begin = mainPathPoints.get(0);
+		goal = new Point(cp.x+1, cp.y);
+		
+		if (animate)
 			frame.getContentPane().repaint();
-		}
 		
-		Point np = randPoint(curr, forward ? p2 : p1);
+		while (pctFilled() < PCTFILLED && buildBranch(animate));
 		
-		if (np == null)
-			return false;
+		return true;
 		
-		if (forward) p1 = np;
-		else p2 = np;
-			
-		return dfs(!forward);
 	}
 	
 	// returns a random neighbor that isn't already white and 
 	// isn't adjacent to any white squares
-	private Point randPoint(Point cp, Point aim) {
+	private Point randPoint(Point cp) {
 		ArrayList<Point> nei = neighbors(cp, false);
 		for (int i = 0; i < nei.size(); i++) {
 			Point p = nei.get(i);
-			if (p.equals(aim)) return p;
+			if (p.x == COLS-2) return p;
 			if (maze[p.y][p.x]) {
 				nei.remove(i);
 				i--;
@@ -231,14 +173,13 @@ public class MazeRunner {
 		ArrayList<Double> prob = new ArrayList<Double>();
 		double sum = 0;
 		for (int i = 0; i < nei.size(); i++) {
-			if (Math.abs(cp.x-aim.x) > Math.abs(nei.get(i).x - aim.x))
-				prob.add(diff+1.0);
-			else if (Math.abs(cp.x-aim.x) < Math.abs(nei.get(i).x - aim.x))
-				prob.add((double)diff);
-			else if (Math.abs(cp.y-aim.y) > Math.abs(nei.get(i).y - aim.y))
-				prob.add(diff+1.0);
-			else if (Math.abs(cp.y-aim.y) < Math.abs(nei.get(i).y - aim.y))
-				prob.add((double)diff);
+			if (nei.get(i).x > cp.x)
+				prob.add(DIRECTIONWEIGHTS[0]);
+			else if (nei.get(i).x == cp.x)
+				prob.add(DIRECTIONWEIGHTS[1]);
+			else
+				prob.add(DIRECTIONWEIGHTS[2]);
+			
 			sum += prob.get(i);
 		}
 		
@@ -257,29 +198,6 @@ public class MazeRunner {
 		return nei.get(nei.size()-1);
 	}
 	
-	// uses bfs to check if the maze is solveable
-	private boolean checkMaze() {
-		HashSet<Point> visited = new HashSet<Point>();
-		ArrayList<Point> toVisit = new ArrayList<Point>();
-
-		toVisit.add(begin);
-		visited.add(toVisit.get(0));
-
-		while (!toVisit.isEmpty()) {
-			Point curr = toVisit.remove(0);
-			for (Point neighbor : neighbors(curr, true)) {
-				if (neighbor.equals(new Point(goal.x-1,goal.y)))
-					return true;
-				if (!visited.contains(neighbor)) {
-					toVisit.add(neighbor);
-					visited.add(neighbor);
-				}
-			}
-
-		}
-		return false;
-	}
-	
 	// returns the legal neighbors of point p
 	private ArrayList<Point> neighbors(Point p, boolean filled) {
 		ArrayList<Point> neighbors = new ArrayList<Point>();
@@ -292,6 +210,46 @@ public class MazeRunner {
 		if (p.x < maze[0].length-2 && maze[p.y][p.x + 1]== filled)
 			neighbors.add(new Point(p.x + 1, p.y));
 		return neighbors;
+	}
+	// adds a side branch to the maze
+	private boolean buildBranch(boolean animate) {
+		Point lastP = null;
+		Point lastDir = null;
+		int branchLength = (int)(Math.random()*maze.length+maze.length/4);
+		if (mainPathPoints.size() <= 0) 
+			return false;
+		Point cp = mainPathPoints.remove((int)(Math.random()*mainPathPoints.size()));
+		for (int i = 0; i < branchLength && cp.y < maze.length-1; i++) {
+			if (animate) {
+				try {
+					Thread.sleep(75);
+				} catch (InterruptedException e) {
+					//  Auto-generated catch block
+					e.printStackTrace();
+				}
+				frame.getContentPane().repaint();
+			}
+			cp = randPoint(cp);
+			if (cp == null) {
+				if (lastDir!= null && lastP.x+lastDir.x < maze[0].length-1 && lastP.x+lastDir.x > 0
+						&& lastP.y+lastDir.y < maze.length && lastP.y+lastDir.y > 0)
+					maze[lastP.y+lastDir.y][lastP.x+lastDir.x] = true;
+				return true;
+			}
+			maze[cp.y][cp.x] = true;
+			if (lastP!= null) lastDir = new Point(cp.x-lastP.x,cp.y-lastP.y);
+			lastP = cp;
+		}
+		return true;
+	}
+	
+	public double pctFilled() {
+		double numFilled = 0;
+		for (boolean[] row : maze) 
+			for (boolean b : row) 
+				if (b) numFilled++;
+					
+		return numFilled/(maze.length*maze[0].length);
 	}
 
 	public MazeRunner() {
@@ -321,7 +279,8 @@ public class MazeRunner {
 					}
 				}
 				g.setColor(Color.GREEN);
-				g.fillRect(goal.x * BOXW + Math.min(extraPixelsW, goal.x), goal.y * BOXH + Math.min(extraPixelsH, goal.y),
+				if (goal != null)
+					g.fillRect(goal.x * BOXW + Math.min(extraPixelsW, goal.x), goal.y * BOXH + Math.min(extraPixelsH, goal.y),
 						BOXW, BOXH);
 				for (Bot b : robots.keySet()) {
 					if (robots.get(b) == null) continue;
@@ -356,7 +315,7 @@ public class MazeRunner {
 		canvas.getActionMap().put("Pause", new PauseAction());
 		
 		frame.getContentPane().repaint();
-		fillMaze();
+		while(!fillMaze(animate));
 		addBots();
 		
 		// runs the maze until a robot has reached the end
@@ -388,7 +347,7 @@ public class MazeRunner {
 	private Bot checkForWin() {
 		for (Bot b : robots.keySet())  {
 			if (robots.get(b) == null) continue;
-			if (robots.get(b).loc.equals(goal)) {
+			if (robots.get(b).loc.x == COLS - 1) {
 				System.out.println(b.getClass() + ": "+count);
 				robots.put(b, null);
 			}
