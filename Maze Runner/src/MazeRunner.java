@@ -25,7 +25,9 @@ public class MazeRunner {
 	// constructs and adds the bots competing into the maze
 	private void addBots() {
 		Bot[] bots = {
-				new SuperBot(this, Color.black), new RandomBot(this, Color.blue)};
+				new SuperBot(this, Color.black), new RandomBot(this, Color.blue), new LoserBot(this)};
+		
+		
 		for (Bot b : bots)
 			robots.put(b, new RobotInfo());
 	}
@@ -82,7 +84,7 @@ public class MazeRunner {
 	public void turnLeft(Bot b) {
 		
 		// not allowed to move twice in one turn
-		if (b.equals(lastbot) && robots.size()>1) {
+		if (b.equals(lastbot) ) {
 			System.out.println(b.getClass() + " tried to move twice in one turn. Disqualified");
 			robots.put(b, null);
 			return;
