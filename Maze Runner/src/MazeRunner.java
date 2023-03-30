@@ -17,7 +17,7 @@ import javax.swing.KeyStroke;
 
 public class MazeRunner {
 	
-	private int speed = 1000; // default is 100- smaller = slower
+	private int speed = 100; // default is 100- smaller = slower
 	
 	private boolean animate = false;	// whether you want to animate maze creation
 
@@ -25,7 +25,8 @@ public class MazeRunner {
 	// constructs and adds the bots competing into the maze
 	private void addBots() {
 		Bot[] bots = {
-				new LeftBot(this, Color.black), new RightBot(this, Color.red)};
+				new SmartBot(this, Color.yellow), new GageSamBot(this, Color.red), new PJLucyLilyBot(this, Color.magenta), new MargaretAnnieEzinneBot(this, Color.pink),
+				new PeterJustinBot(this, Color.blue), new WinnerBot(this, Color.black)};
 		
 		
 		for (Bot b : bots)
