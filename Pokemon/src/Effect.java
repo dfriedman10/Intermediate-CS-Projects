@@ -13,6 +13,6 @@ public enum Effect {
 		this.message = message;
 		this.label = label;
 		this.color = color;
-		this.damage = damage; 
+		this.damage = damage;  
 	}
 }
