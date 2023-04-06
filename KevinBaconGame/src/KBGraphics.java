@@ -1,4 +1,4 @@
-// Program to provide simple text analysis on a chosen file
+// Program to analyze actor connections from an imdb database
 
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
@@ -18,11 +18,13 @@ import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneConstants;
 
 public class KBGraphics {
+	
 	private static final int WIDTH = 600, HEIGHT = 600;
 	private JTextField box1, box2;
 	private JTextArea displayarea;
 	private LabeledGraph<String, String> graph;
 	
+	// runs a bfs to find the path between 2 actors
 	public void connectingActors() {
 		String a1 = box1.getText().trim(), a2 = box2.getText().trim();
 		if (a1.length() == 0 || a2.length() == 0) {

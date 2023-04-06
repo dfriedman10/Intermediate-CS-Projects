@@ -1,12 +1,14 @@
 
-
+// class to represent a pokemon's move
 
 public class Move {
 
-	public int type, damage, effect;
-	public String name;
+	public final Type type;
+	public final int damage;
+	public final Effect effect;
+	public final String name;
 	
-	public Move(String name, int type, int dam, int eff) {
+	public Move(String name, Type type, int dam, Effect eff) {
 		this.name = name; this.type = type;
 		damage = dam; effect = eff;
 	}
